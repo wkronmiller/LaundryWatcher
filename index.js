@@ -46,16 +46,29 @@ function getMachine(id, type) {
         .then(machines => machines[type][id]);
 }
 
+async function monitorOpened(statusFunc) {
+    const status = await statusFunc();
+    if(status === 'Avail') {
+        return notifier.notify('Someone is messing with yo laundry!');
+    }
+    setTimeout(() => { monitorOpened(statusFunc);}, 1000);
+}
+
 async function monitorWasher() {
     const washerNum = 11;
     const status = await getMachine(washerNum, 'washers');
-    if(status === 'Avail') {
-        return notifier.notify({
-            title: 'Laundry Finished',
-            message: `Washer ${washerNum} finished`
-        });
-    }
     console.log('machine status', status);
+    if(status === 'Avail' || status === 'Idle') {
+        notifier.notify({
+            title: 'Laundry Finished',
+            message: `Washer ${washerNum} finished: ${status}`
+        });
+        if(status === 'Idle') {
+            console.log('monitoring opened');
+            monitorOpened(() => {return getMachine(washerNum, 'washers'); });
+        }
+        return;
+    }
     setTimeout(monitorWasher, 5000);
 }
 
